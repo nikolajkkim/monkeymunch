@@ -7,15 +7,16 @@ export interface Deal {
   distance: string;
   image: string;
   type: string;
+  description: string;
+  validity: string;
+  uniqueKey?: string;
 }
 
-// 1. Define the routes in your app and the params they take
 export type RootStackParamList = {
-  Home: undefined; // Home needs no extra data
-  Map: undefined;  // Map needs no extra data
-  DealDetails: { deal: Deal }; // Details MUST be passed a Deal object
+  Home: undefined; 
+  Map: undefined;  
+  DealDetails: { deal: Deal }; 
 };
 
-// 2. Create a reusable type for your screen props
 export type RootStackScreenProps<T extends keyof RootStackParamList> = 
   NativeStackScreenProps<RootStackParamList, T>;

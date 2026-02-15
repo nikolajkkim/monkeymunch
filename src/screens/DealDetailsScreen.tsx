@@ -1,20 +1,24 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, PanResponder, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackScreenProps } from '../types';
+
+import { ChevronDown, Clock, MapPin, Share } from 'lucide-react-native';
+import Animated from 'react-native-reanimated';
+
+const { width } = Dimensions.get('window');
+const EXACT_CARD_WIDTH = (width * 0.8) - 20;
 
 export default function DealDetailsScreen({ route, navigation }: RootStackScreenProps<'DealDetails'>) {
   const { deal } = route.params;
 
-  // Listen for a downward swipe to close the screen
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return Math.abs(gestureState.dy) > 20; // Only claim vertical swipes
+        return gestureState.dy > 20 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx); 
       },
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dy > 50) {
-          // Swiped DOWN -> Go back to Home
           navigation.goBack();
         }
       },
@@ -22,33 +26,65 @@ export default function DealDetailsScreen({ route, navigation }: RootStackScreen
   ).current;
 
   return (
-    // Attach the panHandlers to the root wrapper of the screen
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']} {...panResponder.panHandlers}>
-      <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.closeText}>v SWIPE DOWN TO CLOSE DETAILS</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
+      <View style={styles.dragIndicatorContainer}>
+        <ChevronDown color="#888" size={24} strokeWidth={2.5} />
+      </View>
       
-      <Image source={{ uri: deal.image }} style={styles.image} />
-      
-      <View style={styles.content}>
+      <View style={styles.contentWrapper}>
+        <Animated.Image 
+          source={{ uri: deal.image }} 
+          style={styles.image} 
+        />
+        
         <Text style={styles.restaurant}>{deal.restaurant}</Text>
         <Text style={styles.title}>{deal.title}</Text>
-        <Text style={styles.distance}>{deal.distance}</Text>
-        <View style={styles.tag}><Text style={styles.tagText}>{deal.type}</Text></View>
+        
+        <Text style={styles.sectionTitle}>ABOUT THIS DEAL</Text>
+        <Text style={styles.description}>{deal.description}</Text>
+
+        <View style={styles.infoRow}>
+          <View style={styles.iconContainer}>
+            <Clock color="#111" size={20} strokeWidth={2} />
+          </View>
+          <View>
+            <Text style={styles.infoLabel}>VALIDITY</Text>
+            <Text style={styles.infoValue}>{deal.validity}</Text>
+          </View>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.iconContainer}>
+            <MapPin color="#111" size={20} strokeWidth={2} />
+          </View>
+          <View>
+            <Text style={styles.infoLabel}>DISTANCE</Text>
+            <Text style={styles.infoValue}>{deal.distance.toLowerCase()}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.shareButton} onPress={() => console.log('Share clicked')}>
+          <Share color="#FFF" size={18} strokeWidth={2.5} style={{ marginRight: 8 }} />
+          <Text style={styles.shareButtonText}>Share Deal</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF' },
-  closeButton: { padding: 20, alignItems: 'center', position: 'absolute', top: 40, width: '100%', zIndex: 10 },
-  closeText: { fontSize: 12, fontWeight: 'bold', color: '#FFF', textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
-  image: { width: '100%', height: 400, resizeMode: 'cover' },
-  content: { padding: 24 },
-  restaurant: { fontSize: 16, color: '#666', marginBottom: 4 },
-  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
-  distance: { fontSize: 14, fontWeight: '600', color: '#888', marginBottom: 16 },
-  tag: { backgroundColor: '#000', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, alignSelf: 'flex-start'},
-  tagText: { color: '#FFF', fontWeight: 'bold', fontSize: 12 }
+  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  dragIndicatorContainer: { alignItems: 'center', paddingTop: 0, paddingBottom: 10 },
+  contentWrapper: { width: EXACT_CARD_WIDTH, alignSelf: 'center' },
+  image: { width: '100%', height: 300, resizeMode: 'cover', marginBottom: 24 },
+  restaurant: { fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: 1, fontWeight: '600', marginBottom: 6 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#111', marginBottom: 32 },
+  sectionTitle: { fontSize: 11, color: '#888', fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
+  description: { fontSize: 15, color: '#333', lineHeight: 22, marginBottom: 32 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  iconContainer: { width: 32, alignItems: 'flex-start' },
+  infoLabel: { fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 1, fontWeight: '600', marginBottom: 2 },
+  infoValue: { fontSize: 14, color: '#111', fontWeight: '500' },
+  shareButton: { backgroundColor: '#111', borderRadius: 12, paddingVertical: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20 },
+  shareButtonText: { color: '#FFF', fontSize: 15, fontWeight: '600' }
 });

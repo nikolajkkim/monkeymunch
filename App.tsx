@@ -62,22 +62,23 @@ export default function App() {
       <NavigationContainer>
         <Stack.Navigator 
           initialRouteName="Home"
-          screenOptions={{ headerShown: false }} // Hides the default top bar
+          screenOptions={{ headerShown: false }}
         >
           <Stack.Screen name="Home" component={HomeScreen} />
           
-          {/* Animate from bottom to top */}
           <Stack.Screen 
             name="DealDetails" 
             component={DealDetailsScreen} 
-            options={{ animation: 'slide_from_bottom' }}
+            options={{ animation: 'slide_from_bottom' }} 
           />
           
-          {/* Animate from top to bottom */}
           <Stack.Screen 
             name="Map" 
             component={MapScreen} 
-            options={{ animation: 'fade' }}
+            options={{ 
+              presentation: 'transparentModal',
+              animation: 'none'
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>

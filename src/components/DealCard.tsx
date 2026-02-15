@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import AnimatedReanimated from 'react-native-reanimated';
+import { Animated } from 'react-native';
 import { Deal } from '../types';
 
 const { width } = Dimensions.get('window');
@@ -7,13 +9,24 @@ export const CARD_WIDTH = width * 0.8;
 
 interface DealCardProps {
   deal: Deal;
+  index: number;
+  scrollX: Animated.Value;
 }
 
-export default function DealCard({ deal }: DealCardProps) {
+export default function DealCard({ deal, index, scrollX }: DealCardProps) {
+  
+  const inputRange = [(index - 1) * CARD_WIDTH, index * CARD_WIDTH, (index + 1) * CARD_WIDTH];
+  const scale = scrollX.interpolate({ inputRange, outputRange: [0.9, 1, 0.9], extrapolate: 'clamp' });
+  const opacity = scrollX.interpolate({ inputRange, outputRange: [0.6, 1, 0.6], extrapolate: 'clamp' });
+
   return (
-    <View style={styles.cardContainer}>
+    <Animated.View style={[styles.cardContainer, { transform: [{ scale }], opacity }]}>
       <View style={styles.card}>
-        <Image source={{ uri: deal.image }} style={styles.image} />
+        
+        <AnimatedReanimated.Image 
+          source={{ uri: deal.image }} 
+          style={styles.image} 
+        />
         
         <TouchableOpacity style={styles.heartButton}>
           <Text style={styles.heartText}>♥</Text>
@@ -25,7 +38,7 @@ export default function DealCard({ deal }: DealCardProps) {
           <Text style={styles.restaurantText}>{deal.restaurant}</Text>
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -38,18 +51,10 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH - 20, 
     height: '100%',
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 5, 
   },
   image: {
     width: '100%',
-    height: '75%',
+    flex: 1,
     resizeMode: 'cover',
   },
   heartButton: {
@@ -74,9 +79,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   cardContent: {
-    padding: 16,
-    height: '25%',
-    justifyContent: 'center',
+    paddingTop: 16,
+    paddingBottom: 24,
+    paddingHorizontal: 0,
   },
   distanceText: {
     fontSize: 11,
