@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, TouchableOpacity, TextInput, FlatList, ViewToken, StatusBar, PanResponder } from 'react-native';
+import { 
+  View, Text, StyleSheet, Animated, Dimensions, TouchableOpacity, 
+  TextInput, FlatList, ViewToken, StatusBar, PanResponder 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackScreenProps } from '../types';
 import DealCard, { CARD_WIDTH } from '../components/DealCard';
@@ -21,13 +24,26 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   const rankedInfiniteDeals = useMemo(() => {
-  const rankedBase = getRankedDeals(DEALS, ACTIVE_USER.timePreference);
-  
-  return Array.from({ length: LOOPS * rankedBase.length }, (_, i) => ({
-    ...rankedBase[i % rankedBase.length],
-    uniqueKey: `home-${i}`,
-  }));
-}, []);
+    const rankedBase = getRankedDeals(DEALS, ACTIVE_USER.timePreference);
+    
+    console.log("-----------------------------------------");
+    console.log(`USER: ${ACTIVE_USER.name}`);
+    console.log(`PREFERENCE: ${ACTIVE_USER.timePreference}`);
+    console.log(`SYSTEM TIME: ${new Date().toLocaleTimeString()}`);
+    console.log("-----------------------------------------");
+    console.table(rankedBase.map((d, i) => ({
+      Rank: i + 1,
+      Restaurant: d.restaurant,
+      Deal: d.title,
+      Validity: d.validity
+    })));
+    console.log("-----------------------------------------");
+
+    return Array.from({ length: LOOPS * rankedBase.length }, (_, i) => ({
+      ...rankedBase[i % rankedBase.length],
+      uniqueKey: `home-${i}`,
+    }));
+  }, []);
 
   const [displayDeals, setDisplayDeals] = useState(rankedInfiniteDeals);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -43,7 +59,9 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
       onPanResponderRelease: (_, gestureState) => {
         if (gestureState.dy < -60) {
           const currentDeal = displayDeals[activeIndexRef.current];
-          navigation.navigate('DealDetails', { deal: currentDeal });
+          if (currentDeal) {
+            navigation.navigate('DealDetails', { deal: currentDeal });
+          }
         } else if (gestureState.dy > 60) {
           navigation.navigate('Map');
         }
@@ -55,7 +73,6 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
     setIsRefreshing(true);
     setIsSearchOpen(false);
     setSearchQuery('');
-    
     setDisplayDeals(rankedInfiniteDeals);
     
     setTimeout(() => {
@@ -68,12 +85,16 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
     if (searchQuery.trim() === '') {
       handleRefresh();
     } else {
+      const query = searchQuery.toLowerCase();
+      
       const results = DEALS.filter(deal => 
-        deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deal.restaurant.toLowerCase().includes(searchQuery.toLowerCase())
+        deal.title.toLowerCase().includes(query) ||
+        deal.restaurant.toLowerCase().includes(query) ||
+        deal.description.toLowerCase().includes(query)
       ).map((deal, i) => ({ ...deal, uniqueKey: `search-${i}` }));
       
       setDisplayDeals(results);
+      
       setTimeout(() => {
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 50);
@@ -82,8 +103,9 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length > 0 && viewableItems[0].index !== null) {
-      setCurrentIndex(viewableItems[0].index);
-      activeIndexRef.current = viewableItems[0].index;
+      const index = viewableItems[0].index;
+      setCurrentIndex(index);
+      activeIndexRef.current = index;
     }
   }).current;
 
@@ -108,6 +130,7 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
         </TouchableOpacity>
       </View>
 
+      {/* SEARCH OVERLAY */}
       {isSearchOpen && (
         <View style={styles.searchBarContainer}>
           <TextInput
@@ -207,7 +230,13 @@ const styles = StyleSheet.create({
   logo: { fontSize: 28, fontWeight: '900', color: '#000', letterSpacing: -1.5 },
   mapText: { fontSize: 12, fontWeight: '700', color: '#888', letterSpacing: 1, marginBottom: 6 },
   mapButton: { flexDirection: 'row', alignItems: 'center', paddingBottom: 2 },
-  searchBarContainer: { position: 'absolute', top: 90, left: 24, right: 24, backgroundColor: '#FFF', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, height: 54, borderRadius: 27, zIndex: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
+  searchBarContainer: { 
+    position: 'absolute', top: 90, left: 24, right: 24, 
+    backgroundColor: '#FFF', flexDirection: 'row', alignItems: 'center', 
+    paddingHorizontal: 20, height: 54, borderRadius: 27, zIndex: 20, 
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 
+  },
   searchInput: { flex: 1, fontSize: 16, color: '#000', fontWeight: '500' },
   carouselWrapper: { flex: 1, justifyContent: 'center' },
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
