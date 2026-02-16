@@ -170,7 +170,7 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
         </TouchableOpacity>
 
         <View style={styles.footerCenter}>
-          <ChevronUp color="#888" size={20} strokeWidth={2.5} style={{ marginBottom: 12 }} />
+          <ChevronUp color="#888" size={24} strokeWidth={2.5} style={{ marginBottom: 12 }} />
           <View style={styles.pagination}>
             {Array.from({ length: baseCount }).map((_, i) => (
               <View 
