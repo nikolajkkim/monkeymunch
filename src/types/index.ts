@@ -12,6 +12,12 @@ export interface Deal {
   uniqueKey?: string;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  timePreference: 'breakfast' | 'lunch' | 'dinner' | 'all day';
+}
+
 export type RootStackParamList = {
   Home: undefined; 
   Map: undefined;  

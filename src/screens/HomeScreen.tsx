@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, Animated, Dimensions, TouchableOpacity, TextInp
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackScreenProps } from '../types';
 import DealCard, { CARD_WIDTH } from '../components/DealCard';
-import { DEALS } from '../data/DummyData'; 
+import { DEALS, ACTIVE_USER } from '../data/DummyData'; 
+import { getRankedDeals } from '../utils/DealSorter';
 import { ChevronDown, ChevronUp, Search, RefreshCw, X } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -19,19 +20,20 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
   const [currentIndex, setCurrentIndex] = useState(INITIAL_INDEX);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const infiniteDeals = useMemo(() => {
-    return Array.from({ length: LOOPS * DEALS.length }, (_, i) => ({
-      ...DEALS[i % DEALS.length],
-      uniqueKey: `home-${i}`,
-    }));
-  }, []);
+  const rankedInfiniteDeals = useMemo(() => {
+  const rankedBase = getRankedDeals(DEALS, ACTIVE_USER.timePreference);
+  
+  return Array.from({ length: LOOPS * rankedBase.length }, (_, i) => ({
+    ...rankedBase[i % rankedBase.length],
+    uniqueKey: `home-${i}`,
+  }));
+}, []);
 
-  const [displayDeals, setDisplayDeals] = useState(infiniteDeals);
+  const [displayDeals, setDisplayDeals] = useState(rankedInfiniteDeals);
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList>(null);
   const activeIndexRef = useRef(INITIAL_INDEX);
 
-  // --- GESTURE NAVIGATION ---
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
@@ -49,12 +51,12 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
     })
   ).current;
 
-  // --- REFRESH LOGIC ---
   const handleRefresh = () => {
     setIsRefreshing(true);
     setIsSearchOpen(false);
     setSearchQuery('');
-    setDisplayDeals(infiniteDeals);
+    
+    setDisplayDeals(rankedInfiniteDeals);
     
     setTimeout(() => {
       flatListRef.current?.scrollToIndex({ index: INITIAL_INDEX, animated: true });
