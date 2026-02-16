@@ -24,9 +24,14 @@ export default function MapScreen({ navigation }: RootStackScreenProps<'Map'>) {
       toValue: -height,
       duration: 450,
       useNativeDriver: true,
-      easing: (t) => t * t, 
-    }).start(() => {
-      navigation.goBack(); 
+    }).start(({ finished }) => {
+      if (finished) {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          navigation.navigate('Home');
+        }
+      }
     });
   };
 
