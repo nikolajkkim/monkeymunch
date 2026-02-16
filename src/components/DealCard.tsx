@@ -1,7 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import AnimatedReanimated from 'react-native-reanimated';
-import { Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Image, Animated } from 'react-native';
 import { Deal } from '../types';
 
 const { width } = Dimensions.get('window');
@@ -23,7 +21,7 @@ export default function DealCard({ deal, index, scrollX }: DealCardProps) {
     <Animated.View style={[styles.cardContainer, { transform: [{ scale }], opacity }]}>
       <View style={styles.card}>
         
-        <AnimatedReanimated.Image 
+        <Image 
           source={{ uri: deal.image }} 
           style={styles.image} 
         />

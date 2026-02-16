@@ -1,10 +1,8 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, PanResponder, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, PanResponder, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackScreenProps } from '../types';
-
 import { ChevronDown, Clock, MapPin, Share } from 'lucide-react-native';
-import Animated from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 const EXACT_CARD_WIDTH = (width * 0.8) - 20;
@@ -32,7 +30,7 @@ export default function DealDetailsScreen({ route, navigation }: RootStackScreen
       </View>
       
       <View style={styles.contentWrapper}>
-        <Animated.Image 
+        <Image 
           source={{ uri: deal.image }} 
           style={styles.image} 
         />
