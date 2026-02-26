@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackScreenProps } from '../types';
+import { supabase } from '../lib/supabase';
 
 const PADDING_H = 24;
 
@@ -31,6 +32,8 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedMealTime, setSelectedMealTime] = useState<string | null>(null);
   const [drinkDeals, setDrinkDeals] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const toggleCuisine = (cuisine: string) => {
     if (selectedCuisines.includes(cuisine)) {
@@ -40,19 +43,66 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
     }
   };
 
-  const handleContinue = () => {
-    // For now, just navigate to Home
-    // Later you can store preferences in database
-    const preferences = {
-      cuisines: selectedCuisines,
-      mealTime: selectedMealTime,
-      drinkDeals: drinkDeals,
-    };
-    console.log('User preferences:', preferences);
-    navigation.replace('Home');
+  const handleContinue = async () => {
+    if (!selectedMealTime || drinkDeals === null) return;
+  
+    setError(null);
+    setLoading(true);
+    try {
+      const { data, error: userError } = await supabase.auth.getUser();
+  
+      console.log('supabase.auth.getUser() result:', {
+        data,
+        userError,
+      });
+  
+      if (userError) {
+        throw userError;
+      }
+  
+      if (!data || !data.user) {
+        // No authenticated user – likely why it was failing
+        console.log('No authenticated user found when saving preferences');
+        throw new Error('No authenticated user. Please log in again.');
+      }
+  
+      const user = data.user;
+      console.log('Authenticated user for preferences:', {
+        id: user.id,
+        email: user.email,
+      });
+  
+      // Log the choices before inserting
+      console.log('Saving preferences for user:', {
+        userId: user.id,
+        cuisines: selectedCuisines,
+        mealTime: selectedMealTime,
+        drinkDeals,
+      });
+  
+      const { error: prefsError } = await supabase.from('preferences').insert({
+        user_id: user.id,
+        cuisines: selectedCuisines,
+        meal_time: selectedMealTime,
+        drink_deals: drinkDeals,
+      });
+  
+      if (prefsError) {
+        console.log('Error inserting into preferences:', prefsError);
+        throw prefsError;
+      }
+  
+      console.log('Preferences saved successfully for user:', user.id);
+      navigation.replace('Home');
+    } catch (err: unknown) {
+      console.log('handleContinue error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save preferences.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const canContinue = selectedCuisines.length > 0 && selectedMealTime && drinkDeals !== null;
+  const canContinue = selectedCuisines.length > 0 && selectedMealTime && drinkDeals !== null && !loading;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -171,8 +221,12 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
           onPress={handleContinue}
           disabled={!canContinue}
         >
-          <Text style={styles.continueButtonText}>CONTINUE</Text>
+          <Text style={styles.continueButtonText}>
+            {loading ? 'SAVING...' : 'CONTINUE'}
+          </Text>
         </TouchableOpacity>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <TouchableOpacity
           style={styles.skipButton}
@@ -310,5 +364,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#888',
     letterSpacing: 1,
+  },
+  errorText: {
+    marginTop: 12,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#C00',
   },
 });

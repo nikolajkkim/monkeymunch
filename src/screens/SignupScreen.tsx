@@ -40,11 +40,23 @@ export default function SignupScreen({ navigation }: RootStackScreenProps<'Signu
     setError(null);
     setLoading(true);
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       });
       if (signUpError) throw signUpError;
+
+      const user = data?.user;
+      if (user && data?.session) {
+        const { error: profileError } = await supabase.from('profiles').insert({
+          id: user.id,
+          email: user.email,
+        });
+        if (profileError) {
+          throw profileError;
+        }
+      }
+
       navigation.replace('QuizPreferences');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Sign up failed.');
