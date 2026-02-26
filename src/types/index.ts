@@ -4,6 +4,7 @@ export interface Deal {
   id: string;
   title: string;
   restaurant: string;
+  cuisine: string;
   distance: string;
   image: string;
   type: string;
