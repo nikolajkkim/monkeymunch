@@ -73,3 +73,8 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Local env (Supabase keys, etc.)
+.env
+.env.local
+.env.*.local

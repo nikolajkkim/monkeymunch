@@ -1901,6 +1901,28 @@ PODS:
     - React-utils (= 0.84.0)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.84.0)
+  - RNCAsyncStorage (2.2.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RNReanimated (4.3.0-nightly-20260216-358eda585):
     - hermes-engine
     - RCTRequired
@@ -2216,6 +2238,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios/ReactCodegen`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
+  - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
@@ -2372,6 +2395,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   ReactNativeDependencies:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
+  RNCAsyncStorage:
+    :path: "../node_modules/@react-native-async-storage/async-storage"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -2458,6 +2483,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 27937747ddc743fcb66a8dc19e8edf60188d94cc
   ReactCommon: cc0e38600f82487c5fe5d29150abb6fa9d981986
   ReactNativeDependencies: 07f0c188267ffae601f89cc7e4fa7993283915e4
+  RNCAsyncStorage: e85a99325df9eb0191a6ee2b2a842644c7eb29f4
   RNReanimated: a0609b4bab29b52738af3c0843211a8db2b0c968
   RNScreens: fb11b7412bcbdc0ffafcaf9174938d998d4e2bc4
   RNSVG: 13970bfde0ea9c9e10e01ab0d7b4a6cde11fca1b
