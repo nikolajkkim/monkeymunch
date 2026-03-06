@@ -1,6 +1,5 @@
-// utils/PreferenceEngine.ts
-
 import { Deal } from '../types';
+import { MOCK_PREFERENCES } from '../data';
 
 // ============================================
 // TYPES — will match your database later
@@ -23,7 +22,7 @@ export interface UserPreferences {
 }
 
 // ============================================
-// WEIGHTS — tune these to change ranking
+// EVENT WEIGHTS — tune these to change ranking
 // ============================================
 
 const EVENT_WEIGHTS: Record<EventType, number> = {
@@ -34,128 +33,168 @@ const EVENT_WEIGHTS: Record<EventType, number> = {
 };
 
 // ============================================
-// DUMMY DATA — replace with API calls later
+// SCORING WEIGHTS — must sum to 1.0
 // ============================================
 
-const DUMMY_EVENTS: UserEvent[] = [
-  { userId: 'u3', eventType: 'clicked', dealId: '5', cuisine: 'japanese',  timestamp: new Date() },
-  { userId: 'u3', eventType: 'saved',   dealId: '5', cuisine: 'japanese',  timestamp: new Date() },
-  { userId: 'u3', eventType: 'clicked', dealId: '2', cuisine: 'american',  timestamp: new Date() },
-  { userId: 'u3', eventType: 'viewed',  dealId: '1', cuisine: 'boba',      timestamp: new Date() },
-  { userId: 'u3', eventType: 'clicked', dealId: '3', cuisine: 'chinese',   timestamp: new Date() },
-  { userId: 'u3', eventType: 'saved',   dealId: '3', cuisine: 'chinese',   timestamp: new Date() },
-  { userId: 'u3', eventType: 'viewed',  dealId: '6', cuisine: 'italian',   timestamp: new Date() },
-];
+interface ScoringWeights {
+  distance:     number;
+  cuisineMatch: number;
+  tagMatch:     number;
+  timeOfDay:    number;
+  rating:       number;
+  popularity:   number;
+  saves:        number;
+}
 
-const DUMMY_PREFERENCES: UserPreferences = {
-  userId: 'u3',
-  cuisines: ['japanese', 'chinese'],   // Steven explicitly said he likes these
-  events: DUMMY_EVENTS,
+const WEIGHTS: ScoringWeights = {
+  distance:     0.25,
+  cuisineMatch: 0.20,
+  tagMatch:     0.10,
+  timeOfDay:    0.15,
+  rating:       0.10,
+  popularity:   0.05,
+  saves:        0.15,
 };
 
 // ============================================
-// CORE ENGINE
+// HELPER FUNCTIONS
 // ============================================
 
 /**
- * Calculate a score for each cuisine based on user behavior.
- * Higher score = user likes this cuisine more.
+ * Parse "0.3 MI AWAY" → 0.3
+ */
+function parseDistanceMiles(distance: string): number {
+  const match = distance.match(/([\d.]+)/);
+  return match ? parseFloat(match[1]) : 0;
+}
+
+/**
+ * Calculate implicit score per cuisine from event history
  */
 function getCuisineScores(events: UserEvent[]): Record<string, number> {
   const scores: Record<string, number> = {};
-
   events.forEach((event) => {
     const weight = EVENT_WEIGHTS[event.eventType] || 0;
     scores[event.cuisine] = (scores[event.cuisine] || 0) + weight;
   });
-
   return scores;
 }
 
 /**
- * Get a bonus for explicitly preferred cuisines.
- * This ensures user-selected cuisines always get a boost.
+ * Calculate implicit score per deal type (BOGO, Discount, etc.)
  */
-function getExplicitBonus(cuisines: string[]): Record<string, number> {
-  const bonus: Record<string, number> = {};
-  cuisines.forEach((c) => {
-    bonus[c] = 10; // explicit preference = big boost
-  });
-  return bonus;
-}
-
-/**
- * Score a single deal based on user preferences.
- * Returns a number — higher = more relevant to user.
- */
-function scoreDeal(deal: Deal, preferences: UserPreferences): number {
-  let score = 0;
-
-  const cuisineScores = getCuisineScores(preferences.events);
-  const explicitBonus = getExplicitBonus(preferences.cuisines);
-
-  // You'll need to add a `cuisine` field to your Deal type
-  // For now, we'll use a mapping
-  const dealCuisine = getDealCuisine(deal);
-
-  // Implicit score (from clicks/saves/views)
-  score += cuisineScores[dealCuisine] || 0;
-
-  // Explicit score (from user-selected cuisines)
-  score += explicitBonus[dealCuisine] || 0;
-
-  // Direct interaction bonus: did user interact with THIS specific deal?
-  preferences.events.forEach((event) => {
-    if (event.dealId === deal.id) {
-      score += EVENT_WEIGHTS[event.eventType] || 0;
+function getTagScores(events: UserEvent[], deals: Deal[]): Record<string, number> {
+  const scores: Record<string, number> = {};
+  events.forEach((event) => {
+    const deal = deals.find(d => d.id === event.dealId);
+    if (deal) {
+      const weight = EVENT_WEIGHTS[event.eventType] || 0;
+      scores[deal.type] = (scores[deal.type] || 0) + weight;
     }
   });
-
-  return score;
+  return scores;
 }
 
 /**
- * TEMPORARY: Map deal to cuisine.
- * Replace this when you add `cuisine` field to your Deal type.
+ * Check if a deal is valid right now based on time of day
  */
-function getDealCuisine(deal: Deal): string {
-  const cuisineMap: Record<string, string> = {
-    '1': 'boba',
-    '2': 'american',
-    '3': 'chinese',
-    '4': 'american',
-    '5': 'japanese',
-    '6': 'italian',
-    '7': 'coffee',
-    '8': 'mexican',
-  };
-  return cuisineMap[deal.id] || 'unknown';
+function isDealValidNow(deal: Deal): boolean {
+  const hour = new Date().getHours();
+
+  switch (deal.validity.toLowerCase()) {
+    case 'valid all day':
+      return true;
+    case 'valid breakfast':
+      return hour >= 6 && hour < 11;
+    case 'valid lunch':
+      return hour >= 11 && hour < 15;
+    case 'valid dinner':
+      return hour >= 17 && hour < 23;
+    default:
+      return true;
+  }
 }
 
 // ============================================
-// PUBLIC API — what your screens will call
+// CORE SCORING ENGINE
 // ============================================
 
 /**
- * Rank deals by user preference score.
- * 
- * RIGHT NOW: uses dummy data
- * LATER: swap DUMMY_PREFERENCES with API call
- * 
- * Usage:
- *   const ranked = getPersonalizedDeals(DEALS);
+ * Score a single deal from 0–1 using all weighted factors
+ */
+function scoreDeal(deal: Deal, preferences: UserPreferences, allDeals: Deal[]): number {
+  const cuisineScores = getCuisineScores(preferences.events);
+  const tagScores = getTagScores(preferences.events, allDeals);
+
+  // --- DISTANCE (closer = better) ---
+  const maxDistance = 5.0;
+  const distanceMiles = parseDistanceMiles(deal.distance);
+  const distanceScore = 1 - (distanceMiles / maxDistance);
+
+  // --- CUISINE MATCH (explicit + implicit) ---
+  const maxCuisineScore = Math.max(...Object.values(cuisineScores), 1);
+  const isExplicit = preferences.cuisines.includes(deal.cuisine);
+  const implicitCuisine = (cuisineScores[deal.cuisine] || 0) / maxCuisineScore;
+  const cuisineScore = isExplicit ? 1.0 : implicitCuisine;
+
+  // --- TAG MATCH (deal type preference) ---
+  const maxTagScore = Math.max(...Object.values(tagScores), 1);
+  const tagScore = (tagScores[deal.type] || 0) / maxTagScore;
+
+  // --- TIME OF DAY ---
+  const timeScore = isDealValidNow(deal) ? 1.0 : 0.2;
+
+  // --- RATING ---
+  // TODO: add rating field to Deal type when backend is ready
+  const ratingScore = 0.8; // placeholder
+
+  // --- POPULARITY ---
+  // TODO: get from database (total interactions across all users)
+  const popularityScore = 0.5; // placeholder
+
+  // --- SAVES (user's save count for this cuisine) ---
+  const saveCount = preferences.events.filter(
+    e => e.eventType === 'saved' && e.cuisine === deal.cuisine
+  ).length;
+  const allSaveCounts = preferences.cuisines.map(c =>
+    preferences.events.filter(e => e.eventType === 'saved' && e.cuisine === c).length
+  );
+  const maxSaves = Math.max(...allSaveCounts, 1);
+  const savesScore = saveCount / maxSaves;
+
+  // --- FINAL WEIGHTED SCORE ---
+  const finalScore =
+    (WEIGHTS.distance     * distanceScore)   +
+    (WEIGHTS.cuisineMatch * cuisineScore)    +
+    (WEIGHTS.tagMatch     * tagScore)        +
+    (WEIGHTS.timeOfDay    * timeScore)       +
+    (WEIGHTS.rating       * ratingScore)     +
+    (WEIGHTS.popularity   * popularityScore) +
+    (WEIGHTS.saves        * savesScore);
+
+  return finalScore;
+}
+
+// ============================================
+// PUBLIC API — what your screens call
+// ============================================
+
+/**
+ * Rank deals by personalized score.
+ *
+ * NOW:   uses mock data
+ * LATER: swap MOCK_PREFERENCES with API call
  */
 export function getPersonalizedDeals(deals: Deal[]): Deal[] {
   // TODO: Replace with API call
   // const preferences = await fetchUserPreferences(userId);
-  const preferences = DUMMY_PREFERENCES;
+  const preferences = MOCK_PREFERENCES;
 
   const scored = deals.map((deal) => ({
     deal,
-    score: scoreDeal(deal, preferences),
+    score: scoreDeal(deal, preferences, deals),
   }));
 
-  // Sort by score descending (highest first)
   scored.sort((a, b) => b.score - a.score);
 
   // Debug logging
@@ -163,8 +202,8 @@ export function getPersonalizedDeals(deals: Deal[]): Deal[] {
   console.table(scored.map((s, i) => ({
     Rank: i + 1,
     Restaurant: s.deal.restaurant,
-    Cuisine: getDealCuisine(s.deal),
-    Score: s.score,
+    Cuisine: s.deal.cuisine,
+    Score: s.score.toFixed(3),
   })));
   console.log('=====================================');
 
@@ -173,8 +212,8 @@ export function getPersonalizedDeals(deals: Deal[]): Deal[] {
 
 /**
  * Track a user event.
- * 
- * RIGHT NOW: just logs to console
+ *
+ * NOW:   logs to console + pushes to mock array
  * LATER: send to database
  */
 export function trackDealEvent(
@@ -186,15 +225,15 @@ export function trackDealEvent(
     userId,
     eventType,
     dealId: deal.id,
-    cuisine: getDealCuisine(deal),
+    cuisine: deal.cuisine,
     timestamp: new Date(),
   };
 
   // TODO: Replace with API call
   // await db.collection('user_events').add(event);
 
-  console.log(`📊 TRACKED: ${eventType.toUpperCase()} → ${deal.restaurant} (${getDealCuisine(deal)})`);
+  console.log(`📊 TRACKED: ${eventType.toUpperCase()} → ${deal.restaurant} (${deal.cuisine})`);
 
-  // For now, push to dummy array so it affects ranking in current session
-  DUMMY_EVENTS.push(event);
+  // Push to mock array so it affects ranking in current session
+  MOCK_PREFERENCES.events.push(event);
 }
