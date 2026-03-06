@@ -50,6 +50,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RootStackParamList } from './src/types';
 
+import LoginScreen from './src/screens/LoginScreen';
+import SignupScreen from './src/screens/SignupScreen';
+import QuizPreferencesScreen from './src/screens/QuizPreferencesScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import DealDetailsScreen from './src/screens/DealDetailsScreen';
 import MapScreen from './src/screens/MapScreen';
@@ -60,22 +63,25 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-        <Stack.Navigator 
-          initialRouteName="Home"
+        <Stack.Navigator
+          initialRouteName="Login"
           screenOptions={{ headerShown: false }}
         >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Signup" component={SignupScreen} />
+          <Stack.Screen name="QuizPreferences" component={QuizPreferencesScreen} />
           <Stack.Screen name="Home" component={HomeScreen} />
-          
-          <Stack.Screen 
-            name="DealDetails" 
-            component={DealDetailsScreen} 
-            options={{ animation: 'slide_from_bottom' }} 
+
+          <Stack.Screen
+            name="DealDetails"
+            component={DealDetailsScreen}
+            options={{ animation: 'slide_from_bottom' }}
           />
-          
-          <Stack.Screen 
-            name="Map" 
-            component={MapScreen} 
-            options={{ 
+
+          <Stack.Screen
+            name="Map"
+            component={MapScreen}
+            options={{
               presentation: 'transparentModal',
               animation: 'none'
             }}

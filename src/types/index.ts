@@ -19,10 +19,13 @@ export interface User {
 }
 
 export type RootStackParamList = {
-  Home: undefined; 
-  Map: undefined;  
-  DealDetails: { deal: Deal }; 
+  Login: undefined;
+  Signup: undefined;
+  QuizPreferences: undefined;
+  Home: undefined;
+  Map: undefined;
+  DealDetails: { deal: Deal };
 };
 
-export type RootStackScreenProps<T extends keyof RootStackParamList> = 
+export type RootStackScreenProps<T extends keyof RootStackParamList> =
   NativeStackScreenProps<RootStackParamList, T>;
