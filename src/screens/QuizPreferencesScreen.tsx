@@ -19,12 +19,10 @@ const CUISINES = [
   'Chinese',
   'Japanese',
   'Indian',
-  'American',
   'Thai',
-  'Mediterranean',
-  'French',
-  'Korean',
+  'American',
 ];
+
 
 const MEAL_TIMES = ['Breakfast', 'Lunch', 'Dinner'];
 
@@ -45,33 +43,33 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
 
   const handleContinue = async () => {
     if (!selectedMealTime || drinkDeals === null) return;
-  
+
     setError(null);
     setLoading(true);
     try {
       const { data, error: userError } = await supabase.auth.getUser();
-  
+
       console.log('supabase.auth.getUser() result:', {
         data,
         userError,
       });
-  
+
       if (userError) {
         throw userError;
       }
-  
+
       if (!data || !data.user) {
         // No authenticated user – likely why it was failing
         console.log('No authenticated user found when saving preferences');
         throw new Error('No authenticated user. Please log in again.');
       }
-  
+
       const user = data.user;
       console.log('Authenticated user for preferences:', {
         id: user.id,
         email: user.email,
       });
-  
+
       // Log the choices before inserting
       console.log('Saving preferences for user:', {
         userId: user.id,
@@ -79,19 +77,19 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
         mealTime: selectedMealTime,
         drinkDeals,
       });
-  
+
       const { error: prefsError } = await supabase.from('preferences').insert({
         user_id: user.id,
         cuisines: selectedCuisines,
         meal_time: selectedMealTime,
         drink_deals: drinkDeals,
       });
-  
+
       if (prefsError) {
         console.log('Error inserting into preferences:', prefsError);
         throw prefsError;
       }
-  
+
       console.log('Preferences saved successfully for user:', user.id);
       navigation.replace('Home');
     } catch (err: unknown) {
@@ -107,7 +105,7 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       <View style={styles.header}>
         <Text style={styles.logo}>munch</Text>
         <Text style={styles.subtitle}>Let's personalize your experience</Text>
@@ -122,7 +120,7 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
         <View style={styles.section}>
           <Text style={styles.questionText}>What type of cuisine do you prefer?</Text>
           <Text style={styles.helperText}>Select all that apply</Text>
-          
+
           <View style={styles.optionsGrid}>
             {CUISINES.map((cuisine) => (
               <TouchableOpacity
@@ -150,7 +148,7 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
         <View style={styles.section}>
           <Text style={styles.questionText}>What's your favorite meal time?</Text>
           <Text style={styles.helperText}>Choose one</Text>
-          
+
           <View style={styles.optionsColumn}>
             {MEAL_TIMES.map((meal) => (
               <TouchableOpacity
@@ -178,7 +176,7 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
         <View style={styles.section}>
           <Text style={styles.questionText}>Are you a fan of drink deals?</Text>
           <Text style={styles.helperText}>Choose one</Text>
-          
+
           <View style={styles.optionsColumn}>
             <TouchableOpacity
               style={[
@@ -240,9 +238,9 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#FFF' 
+  container: {
+    flex: 1,
+    backgroundColor: '#FFF'
   },
   header: {
     paddingHorizontal: PADDING_H,
@@ -261,8 +259,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#555',
   },
-  scroll: { 
-    flex: 1 
+  scroll: {
+    flex: 1
   },
   content: {
     paddingHorizontal: PADDING_H,
@@ -346,8 +344,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
   },
-  buttonDisabled: { 
-    opacity: 0.4 
+  buttonDisabled: {
+    opacity: 0.4
   },
   continueButtonText: {
     fontSize: 12,
