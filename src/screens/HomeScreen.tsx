@@ -33,9 +33,9 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
     console.log("-----------------------------------------");
     console.table(rankedBase.map((d, i) => ({
       Rank: i + 1,
-      Restaurant: d.restaurant,
+      Restaurant: d.restaurant_id,
       Deal: d.title,
-      Validity: d.validity
+      Validity: d.meal_time
     })));
     console.log("-----------------------------------------");
 
@@ -89,7 +89,7 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
       
       const results = DEALS.filter(deal => 
         deal.title.toLowerCase().includes(query) ||
-        deal.restaurant.toLowerCase().includes(query) ||
+        deal.restaurant_id.toString().includes(query) ||
         deal.description.toLowerCase().includes(query)
       ).map((deal, i) => ({ ...deal, uniqueKey: `search-${i}` }));
       
