@@ -14,17 +14,15 @@ export const getRankedDeals = (deals: Deal[], preferredTime?: string): Deal[] =>
     let scoreA = 0;
     let scoreB = 0;
 
-    const distA = parseFloat(a.distance);
-    const distB = parseFloat(b.distance);
-    scoreA -= distA * 10;
-    scoreB -= distB * 10;
+    scoreA -= a.distance * 10;
+    scoreB -= b.distance * 10;
 
-    if (a.validity.toLowerCase().includes(currentMealTime)) scoreA += 30;
-    if (b.validity.toLowerCase().includes(currentMealTime)) scoreB += 30;
+    // if (a.validity.toLowerCase().includes(currentMealTime)) scoreA += 30;
+    // if (b.validity.toLowerCase().includes(currentMealTime)) scoreB += 30;
 
     if (preferredTime) {
-      if (a.validity.toLowerCase().includes(preferredTime.toLowerCase())) scoreA += 60;
-      if (b.validity.toLowerCase().includes(preferredTime.toLowerCase())) scoreB += 60;
+      if (a.meal_time.toLowerCase().includes(preferredTime.toLowerCase())) scoreA += 60;
+      if (b.meal_time.toLowerCase().includes(preferredTime.toLowerCase())) scoreB += 60;
     }
 
     return scoreB - scoreA;

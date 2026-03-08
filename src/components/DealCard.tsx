@@ -22,7 +22,7 @@ export default function DealCard({ deal, index, scrollX }: DealCardProps) {
       <View style={styles.card}>
         
         <Image 
-          source={{ uri: deal.image }} 
+          source={{ uri: deal.image_url }} 
           style={styles.image} 
         />
         
@@ -31,9 +31,9 @@ export default function DealCard({ deal, index, scrollX }: DealCardProps) {
         </TouchableOpacity>
 
         <View style={styles.cardContent}>
-          <Text style={styles.distanceText}>{deal.distance}</Text>
+          <Text style={styles.distanceText}>{deal.distance} miles</Text>
           <Text style={styles.titleText}>{deal.title}</Text>
-          <Text style={styles.restaurantText}>{deal.restaurant}</Text>
+          <Text style={styles.restaurantText}>{deal.Restaurants?.name}</Text>
         </View>
       </View>
     </Animated.View>

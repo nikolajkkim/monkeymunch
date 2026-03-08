@@ -4,28 +4,58 @@ import {
   TextInput, FlatList, ViewToken, StatusBar, PanResponder 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RootStackScreenProps } from '../types';
+import { Deal, RootStackScreenProps } from '../types';
 import DealCard, { CARD_WIDTH } from '../components/DealCard';
-import { DEALS, ACTIVE_USER } from '../data/DummyData'; 
+import { ACTIVE_USER } from '../data/DummyData'; 
 import { getRankedDeals } from '../utils/DealSorter';
 import { ChevronDown, ChevronUp, Search, RefreshCw, X } from 'lucide-react-native';
+import { getDeals } from '../lib/deals';
+import { getDistanceMiles } from '../utils/Distance';
+import { getUserCoords } from '../utils/GetUserCoords';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const SPACING = (width - CARD_WIDTH) / 2;
 const ALIGNMENT_PADDING = SPACING + 10;
 
 const LOOPS = 40; 
-const INITIAL_INDEX = Math.floor((LOOPS * DEALS.length) / 2);
 
 export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>) {
+  //  ------------ DATA FETCHING -----------------
+  const [deals, setDeals] = useState<Deal[]>([]);
+
+  const loadDeals = async () => {
+    try {
+      const fetchedDeals = await getDeals();
+      const userCoords = await getUserCoords();
+      const dealsWithDistance = fetchedDeals
+        .filter((deal) => deal.Restaurants)
+        .map((deal) => ({
+          ...deal,
+          distance: getDistanceMiles(
+            userCoords.latitude,
+            userCoords.longitude,
+            deal.Restaurants!.latitude,
+            deal.Restaurants!.longitude
+          ),
+        }));
+      setDeals(dealsWithDistance);
+    } catch (error) {
+      console.error('Error loading deals:', error);
+    }
+  };
+
+  useEffect(() => { loadDeals(); }, []);
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(INITIAL_INDEX);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+  const [currentIndex, setCurrentIndex] = useState(0);
+
   const rankedInfiniteDeals = useMemo(() => {
-    const rankedBase = getRankedDeals(DEALS, ACTIVE_USER.timePreference);
-    
+    if (deals.length === 0) return [];
+
+    const rankedBase = getRankedDeals(deals, ACTIVE_USER.timePreference);
+
     console.log("-----------------------------------------");
     console.log(`USER: ${ACTIVE_USER.name}`);
     console.log(`PREFERENCE: ${ACTIVE_USER.timePreference}`);
@@ -43,12 +73,26 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
       ...rankedBase[i % rankedBase.length],
       uniqueKey: `home-${i}`,
     }));
-  }, []);
+  }, [deals]); 
 
-  const [displayDeals, setDisplayDeals] = useState(rankedInfiniteDeals);
+  const INITIAL_INDEX = Math.floor(rankedInfiniteDeals.length / 2);
+
+  const [displayDeals, setDisplayDeals] = useState<typeof rankedInfiniteDeals>([]);
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList>(null);
-  const activeIndexRef = useRef(INITIAL_INDEX);
+  const activeIndexRef = useRef(0);
+
+  // ✅ Fix: sync displayDeals when rankedInfiniteDeals populates
+  useEffect(() => {
+    if (rankedInfiniteDeals.length > 0) {
+      setDisplayDeals(rankedInfiniteDeals);
+      activeIndexRef.current = INITIAL_INDEX;
+      setCurrentIndex(INITIAL_INDEX);
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({ index: INITIAL_INDEX, animated: false });
+      }, 50);
+    }
+  }, [rankedInfiniteDeals]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -73,12 +117,13 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
     setIsRefreshing(true);
     setIsSearchOpen(false);
     setSearchQuery('');
-    setDisplayDeals(rankedInfiniteDeals);
-    
-    setTimeout(() => {
-      flatListRef.current?.scrollToIndex({ index: INITIAL_INDEX, animated: true });
-      setIsRefreshing(false);
-    }, 200);
+
+    loadDeals().finally(() => {
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({ index: INITIAL_INDEX, animated: true });
+        setIsRefreshing(false);
+      }, 200);
+    });
   };
 
   const handleSearch = () => {
@@ -86,15 +131,15 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
       handleRefresh();
     } else {
       const query = searchQuery.toLowerCase();
-      
-      const results = DEALS.filter(deal => 
+
+      const results = deals.filter(deal =>
         deal.title.toLowerCase().includes(query) ||
         deal.restaurant_id.toString().includes(query) ||
         deal.description.toLowerCase().includes(query)
       ).map((deal, i) => ({ ...deal, uniqueKey: `search-${i}` }));
-      
+
       setDisplayDeals(results);
-      
+
       setTimeout(() => {
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 50);
@@ -111,7 +156,7 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
-  const baseCount = displayDeals.length > DEALS.length ? DEALS.length : displayDeals.length;
+  const baseCount = displayDeals.length > deals.length ? deals.length : displayDeals.length;
   const activeDotIndex = baseCount > 0 ? currentIndex % baseCount : 0;
 
   return (
@@ -162,7 +207,7 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
             contentContainerStyle={{ paddingHorizontal: SPACING }}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
-            initialScrollIndex={displayDeals.length > DEALS.length ? INITIAL_INDEX : 0}
+            initialScrollIndex={displayDeals.length > deals.length ? INITIAL_INDEX : 0}
             getItemLayout={(_, index) => ({
               length: CARD_WIDTH,
               offset: CARD_WIDTH * index,
@@ -173,7 +218,7 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
               { useNativeDriver: true }
             )}
             renderItem={({ item, index }) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 activeOpacity={1}
                 onPress={() => navigation.navigate('DealDetails', { deal: item })}
               >
@@ -198,12 +243,12 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
           <ChevronUp color="#888" size={24} strokeWidth={2.5} style={{ marginBottom: 12 }} />
           <View style={styles.pagination}>
             {Array.from({ length: baseCount }).map((_, i) => (
-              <View 
-                key={i} 
+              <View
+                key={i}
                 style={[
-                  styles.dot, 
+                  styles.dot,
                   activeDotIndex === i ? styles.activeDot : styles.inactiveDot
-                ]} 
+                ]}
               />
             ))}
           </View>

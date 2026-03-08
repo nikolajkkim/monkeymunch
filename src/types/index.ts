@@ -1,17 +1,31 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-export interface Deal {
-  id: string;
+export type Deal = {
+  deal_id: number;
+  restaurant_id: number;
   title: string;
-  restaurant: string;
-  cuisine: string;
-  distance: string;
-  image: string;
-  type: string;
   description: string;
-  validity: string;
-  uniqueKey?: string;
-}
+  deal_type: string;
+  start_time: string;
+  end_time: string;
+  meal_time: string;
+  is_active: boolean;
+  category: string;
+  tag: string;
+  Restaurants: {
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    rating: number;
+  } | null;
+  distance: number;
+  image_url: string;
+};
+
+export type RankedDeal = Deal & {
+  distance: number;
+};
 
 export interface User {
   id: string;
