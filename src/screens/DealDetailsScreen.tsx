@@ -31,11 +31,11 @@ export default function DealDetailsScreen({ route, navigation }: RootStackScreen
       
       <View style={styles.contentWrapper}>
         <Image 
-          source={{ uri: deal.image }} 
+          source={{ uri: deal.image_url }} 
           style={styles.image} 
         />
         
-        <Text style={styles.restaurant}>{deal.restaurant}</Text>
+        <Text style={styles.restaurant}>{deal.Restaurants?.name}</Text>
         <Text style={styles.title}>{deal.title}</Text>
         
         <Text style={styles.sectionTitle}>ABOUT THIS DEAL</Text>
@@ -47,7 +47,7 @@ export default function DealDetailsScreen({ route, navigation }: RootStackScreen
           </View>
           <View>
             <Text style={styles.infoLabel}>VALIDITY</Text>
-            <Text style={styles.infoValue}>{deal.validity}</Text>
+            <Text style={styles.infoValue}>{deal.meal_time}</Text>
           </View>
         </View>
 
@@ -57,7 +57,7 @@ export default function DealDetailsScreen({ route, navigation }: RootStackScreen
           </View>
           <View>
             <Text style={styles.infoLabel}>DISTANCE</Text>
-            <Text style={styles.infoValue}>{deal.distance.toLowerCase()}</Text>
+            <Text style={styles.infoValue}>{deal.distance} miles</Text>
           </View>
         </View>
 

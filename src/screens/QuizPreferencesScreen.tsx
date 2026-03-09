@@ -13,83 +13,76 @@ import { supabase } from '../lib/supabase';
 
 const PADDING_H = 24;
 
-const preferences = [
-  'Italian',
-  'Mexican',
-  'Chinese',
-  'Japanese',
-  'Indian',
-  'Thai',
-  'American',
-  'Coffee',
-  'Tea',
+const CUISINES = [
+  'Italian', 'Mexican', 'Chinese', 'Japanese',
+  'Indian', 'American', 'Thai', 'Coffee', 'Tea',
 ];
-
 
 const MEAL_TIMES = ['Breakfast', 'Lunch', 'Dinner'];
 
 export default function QuizPreferencesScreen({ navigation }: RootStackScreenProps<'QuizPreferences'>) {
-  const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedMealTime, setSelectedMealTime] = useState<string | null>(null);
+  const [drinkDeals, setDrinkDeals] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const togglePreferences = (pref: string) => {
-    if (selectedPreferences.includes(pref)) {
-      setSelectedPreferences(selectedPreferences.filter(c => c !== pref));
+  const toggleCuisine = (cuisine: string) => {
+    if (selectedCuisines.includes(cuisine)) {
+      setSelectedCuisines(selectedCuisines.filter(c => c !== cuisine));
     } else {
-      setSelectedPreferences([...selectedPreferences, pref]);
+      setSelectedCuisines([...selectedCuisines, cuisine]);
     }
   };
 
   const handleContinue = async () => {
-    if (!selectedMealTime) return;
-
+    if (!selectedMealTime || drinkDeals === null) return;
+  
     setError(null);
     setLoading(true);
     try {
       const { data, error: userError } = await supabase.auth.getUser();
-
+  
       console.log('supabase.auth.getUser() result:', {
         data,
         userError,
       });
-
+  
       if (userError) {
         throw userError;
       }
-
+  
       if (!data || !data.user) {
+        // No authenticated user – likely why it was failing
         console.log('No authenticated user found when saving preferences');
         throw new Error('No authenticated user. Please log in again.');
       }
-
+  
       const user = data.user;
       console.log('Authenticated user for preferences:', {
         id: user.id,
         email: user.email,
       });
-
+  
       // Log the choices before inserting
       console.log('Saving preferences for user:', {
         userId: user.id,
-        preferences: selectedPreferences,
+        cuisines: selectedCuisines,
         mealTime: selectedMealTime,
-        //drinkDeals,
+        drinkDeals,
       });
-
+  
       const { error: prefsError } = await supabase.from('preferences').insert({
         user_id: user.id,
-        preferences: selectedPreferences,
-        meal_time: selectedMealTime,
-        //drink_deals: drinkDeals,
+        preferences: selectedCuisines,
+        meal_time: selectedMealTime
       });
-
+  
       if (prefsError) {
         console.log('Error inserting into preferences:', prefsError);
         throw prefsError;
       }
-
+  
       console.log('Preferences saved successfully for user:', user.id);
       navigation.replace('Home');
     } catch (err: unknown) {
@@ -100,12 +93,12 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
     }
   };
 
-  const canContinue = selectedPreferences.length > 0 && selectedMealTime && !loading;
+  const canContinue = selectedCuisines.length > 0 && selectedMealTime && drinkDeals !== null && !loading;
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-
+      
       <View style={styles.header}>
         <Text style={styles.logo}>munch</Text>
         <Text style={styles.subtitle}>Let's personalize your experience</Text>
@@ -120,24 +113,24 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
         <View style={styles.section}>
           <Text style={styles.questionText}>What type of cuisine do you prefer?</Text>
           <Text style={styles.helperText}>Select all that apply</Text>
-
+          
           <View style={styles.optionsGrid}>
-            {preferences.map((pref) => (
+            {CUISINES.map((cuisine) => (
               <TouchableOpacity
-                key={pref}
+                key={cuisine}
                 style={[
                   styles.cuisineOption,
-                  selectedPreferences.includes(pref) && styles.cuisineOptionSelected,
+                  selectedCuisines.includes(cuisine) && styles.cuisineOptionSelected,
                 ]}
-                onPress={() => togglePreferences(pref)}
+                onPress={() => toggleCuisine(cuisine)}
               >
                 <Text
                   style={[
                     styles.cuisineText,
-                    selectedPreferences.includes(pref) && styles.cuisineTextSelected,
+                    selectedCuisines.includes(cuisine) && styles.cuisineTextSelected,
                   ]}
                 >
-                  {pref}
+                  {cuisine}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -148,7 +141,7 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
         <View style={styles.section}>
           <Text style={styles.questionText}>What's your favorite meal time?</Text>
           <Text style={styles.helperText}>Choose one</Text>
-
+          
           <View style={styles.optionsColumn}>
             {MEAL_TIMES.map((meal) => (
               <TouchableOpacity
@@ -172,7 +165,46 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
           </View>
         </View>
 
-       
+        {/* Drink Deals */}
+        <View style={styles.section}>
+          <Text style={styles.questionText}>Are you a fan of drink deals?</Text>
+          <Text style={styles.helperText}>Choose one</Text>
+          
+          <View style={styles.optionsColumn}>
+            <TouchableOpacity
+              style={[
+                styles.mealOption,
+                drinkDeals === true && styles.mealOptionSelected,
+              ]}
+              onPress={() => setDrinkDeals(true)}
+            >
+              <Text
+                style={[
+                  styles.mealText,
+                  drinkDeals === true && styles.mealTextSelected,
+                ]}
+              >
+                Yes, I love drink deals! 🍹
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.mealOption,
+                drinkDeals === false && styles.mealOptionSelected,
+              ]}
+              onPress={() => setDrinkDeals(false)}
+            >
+              <Text
+                style={[
+                  styles.mealText,
+                  drinkDeals === false && styles.mealTextSelected,
+                ]}
+              >
+                No, not really
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Continue Button */}
         <TouchableOpacity
@@ -199,9 +231,9 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFF'
+  container: { 
+    flex: 1, 
+    backgroundColor: '#FFF' 
   },
   header: {
     paddingHorizontal: PADDING_H,
@@ -220,8 +252,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#555',
   },
-  scroll: {
-    flex: 1
+  scroll: { 
+    flex: 1 
   },
   content: {
     paddingHorizontal: PADDING_H,
@@ -305,8 +337,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
   },
-  buttonDisabled: {
-    opacity: 0.4
+  buttonDisabled: { 
+    opacity: 0.4 
   },
   continueButtonText: {
     fontSize: 12,

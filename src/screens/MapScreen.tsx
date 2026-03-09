@@ -76,7 +76,7 @@ export default function MapScreen({ navigation }: RootStackScreenProps<'Map'>) {
           >
             {DEALS.map((deal, index) => (
               <Marker
-                key={deal.id}
+                key={deal.deal_id}
                 coordinate={{
                   latitude: INITIAL_REGION.latitude + (index === 0 ? 0.005 : index === 1 ? -0.008 : 0.002),
                   longitude: INITIAL_REGION.longitude + (index === 0 ? -0.005 : index === 1 ? 0.01 : -0.012),
@@ -85,7 +85,7 @@ export default function MapScreen({ navigation }: RootStackScreenProps<'Map'>) {
               >
                 <View style={styles.customMarker}>
                   <View style={styles.pinBubble}>
-                    <Text style={styles.pinText}>{deal.restaurant}</Text>
+                    <Text style={styles.pinText}>{deal.restaurant_id}</Text>
                   </View>
                   <View style={styles.pinIconContainer}>
                     <MapPin color="#000" size={34} fill="#000" strokeWidth={1} />

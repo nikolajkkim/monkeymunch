@@ -60,6 +60,13 @@
             ReferencedContainer = "container:munch.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "MAPS_API_KEY"
+            value = "AIzaSyCx0I9QsZ4rZTIxGpVr_SM3fGxgK00sk-4"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
