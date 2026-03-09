@@ -6,23 +6,36 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Deal, RootStackScreenProps } from '../types';
 import DealCard, { CARD_WIDTH } from '../components/DealCard';
-import { ACTIVE_USER } from '../data/DummyData'; 
-import { getRankedDeals } from '../utils/DealSorter';
+import { getPersonalizedDeals } from '../utils/PreferenceEngine';
 import { ChevronDown, ChevronUp, Search, RefreshCw, X } from 'lucide-react-native';
 import { getDeals } from '../lib/deals';
 import { getDistanceMiles } from '../utils/Distance';
 import { getUserCoords } from '../utils/GetUserCoords';
+import { supabase } from '../lib/supabase'; 
 
 const { width } = Dimensions.get('window');
 const SPACING = (width - CARD_WIDTH) / 2;
 const ALIGNMENT_PADDING = SPACING + 10;
 
-const LOOPS = 40; 
+const LOOPS = 40;
 
 export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>) {
-  //  ------------ DATA FETCHING -----------------
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [rankedDeals, setRankedDeals] = useState<Deal[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
+  // -----------------------------------------------
+  // AUTH — get current user id once on mount
+  // -----------------------------------------------
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
+  }, []);
+
+  // -----------------------------------------------
+  // DATA FETCHING — load deals with distance
+  // -----------------------------------------------
   const loadDeals = async () => {
     try {
       const fetchedDeals = await getDeals();
@@ -46,34 +59,33 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
 
   useEffect(() => { loadDeals(); }, []);
 
+  // -----------------------------------------------
+  // RANKING — re-rank whenever deals or userId changes
+  // -----------------------------------------------
+  useEffect(() => {
+    if (deals.length === 0 || !userId) return;
+
+    getPersonalizedDeals(deals, userId).then((ranked) => {
+      setRankedDeals(ranked);
+    });
+  }, [deals, userId]);
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // -----------------------------------------------
+  // INFINITE LOOP — built from ranked deals
+  // -----------------------------------------------
   const rankedInfiniteDeals = useMemo(() => {
-    if (deals.length === 0) return [];
+    if (rankedDeals.length === 0) return [];
 
-    const rankedBase = getRankedDeals(deals, ACTIVE_USER.timePreference);
-
-    console.log("-----------------------------------------");
-    console.log(`USER: ${ACTIVE_USER.name}`);
-    console.log(`PREFERENCE: ${ACTIVE_USER.timePreference}`);
-    console.log(`SYSTEM TIME: ${new Date().toLocaleTimeString()}`);
-    console.log("-----------------------------------------");
-    console.table(rankedBase.map((d, i) => ({
-      Rank: i + 1,
-      Restaurant: d.restaurant_id,
-      Deal: d.title,
-      Validity: d.meal_time
-    })));
-    console.log("-----------------------------------------");
-
-    return Array.from({ length: LOOPS * rankedBase.length }, (_, i) => ({
-      ...rankedBase[i % rankedBase.length],
+    return Array.from({ length: LOOPS * rankedDeals.length }, (_, i) => ({
+      ...rankedDeals[i % rankedDeals.length],
       uniqueKey: `home-${i}`,
     }));
-  }, [deals]); 
+  }, [rankedDeals]);
 
   const INITIAL_INDEX = Math.floor(rankedInfiniteDeals.length / 2);
 
@@ -82,7 +94,6 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
   const flatListRef = useRef<FlatList>(null);
   const activeIndexRef = useRef(0);
 
-  // ✅ Fix: sync displayDeals when rankedInfiniteDeals populates
   useEffect(() => {
     if (rankedInfiniteDeals.length > 0) {
       setDisplayDeals(rankedInfiniteDeals);
@@ -113,6 +124,9 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
     })
   ).current;
 
+  // -----------------------------------------------
+  // REFRESH
+  // -----------------------------------------------
   const handleRefresh = () => {
     setIsRefreshing(true);
     setIsSearchOpen(false);
@@ -126,6 +140,9 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
     });
   };
 
+  // -----------------------------------------------
+  // SEARCH
+  // -----------------------------------------------
   const handleSearch = () => {
     if (searchQuery.trim() === '') {
       handleRefresh();

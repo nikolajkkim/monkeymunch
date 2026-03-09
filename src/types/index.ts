@@ -10,7 +10,6 @@ export type Deal = {
   end_time: string;
   meal_time: string;
   is_active: boolean;
-  category: string;
   tag: string;
   Restaurants: {
     name: string;
@@ -18,6 +17,11 @@ export type Deal = {
     latitude: number;
     longitude: number;
     rating: number;
+    RestaurantHours: {
+      day_of_week: number;
+      open_time: string;
+      close_time: string;
+    }[];
   } | null;
   distance: number;
   image_url: string;

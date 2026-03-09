@@ -14,16 +14,8 @@ import { supabase } from '../lib/supabase';
 const PADDING_H = 24;
 
 const CUISINES = [
-  'Italian',
-  'Mexican',
-  'Chinese',
-  'Japanese',
-  'Indian',
-  'American',
-  'Thai',
-  'Mediterranean',
-  'French',
-  'Korean',
+  'Italian', 'Mexican', 'Chinese', 'Japanese',
+  'Indian', 'American', 'Thai', 'Coffee', 'Tea',
 ];
 
 const MEAL_TIMES = ['Breakfast', 'Lunch', 'Dinner'];
@@ -82,9 +74,8 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
   
       const { error: prefsError } = await supabase.from('preferences').insert({
         user_id: user.id,
-        cuisines: selectedCuisines,
-        meal_time: selectedMealTime,
-        drink_deals: drinkDeals,
+        preferences: selectedCuisines,
+        meal_time: selectedMealTime
       });
   
       if (prefsError) {
