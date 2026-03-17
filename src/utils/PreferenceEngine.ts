@@ -269,14 +269,50 @@ export async function getPersonalizedDeals(
   scored.sort((a, b) => b.score - a.score);
 
   console.log('========= PREFERENCE ENGINE =========');
-  console.table(scored.map((s, i) => ({
-    Rank: i + 1,
-    Restaurant: s.deal.Restaurants?.name ?? 'Unknown',
-    Tag: s.deal.tag,
-    Open: isRestaurantOpenNow(s.deal),
-    Score: s.score.toFixed(3),
-  })));
-  console.log('=====================================');
+  scored.forEach((s, i) => {
+    const deal = s.deal;
+
+    // Recalculate each component for logging
+    const tagScores      = getTagScores(preferences.events);
+    const dealTypeScores = getDealTypeScores(preferences.events, deals);
+
+    const maxDistance     = 5.0;
+    const distanceScore   = 1 - Math.min(deal.distance / maxDistance, 1);
+
+    const maxTagScore     = Math.max(...Object.values(tagScores), 1);
+    const isExplicit      = preferences.tags.includes(deal.tag);
+    const implicitTag     = Math.max((tagScores[deal.tag] || 0) / maxTagScore, 0);
+    const tagMatchScore   = isExplicit ? 1.0 : implicitTag;
+
+    const maxDealTypeScore = Math.max(...Object.values(dealTypeScores), 1);
+    const dealTypeScore    = Math.max((dealTypeScores[deal.deal_type] || 0) / maxDealTypeScore, 0);
+
+    const isOpen          = isRestaurantOpenNow(deal);
+    const isRelevantTime  = isDealValidNow(deal);
+    const timeScore       = isOpen ? (isRelevantTime ? 1.0 : 0.5) : 0.2;
+
+    const rating          = deal.Restaurants?.rating ?? 3.0;
+    const ratingScore     = rating / 5.0;
+
+    const maxPopularity   = Math.max(...Object.values(popularityMap), 1);
+    const popularityScore = (popularityMap[deal.deal_id] || 0) / maxPopularity;
+
+    const saveCount       = preferences.events.filter(e => e.eventType === 'saved' && e.tag === deal.tag).length;
+    const allSaveCounts   = preferences.tags.map(t => preferences.events.filter(e => e.eventType === 'saved' && e.tag === t).length);
+    const maxSaves        = Math.max(...allSaveCounts, 1);
+    const savesScore      = saveCount / maxSaves;
+
+    console.log(`\n#${i + 1} ${deal.Restaurants?.name ?? 'Unknown'} (${deal.title})`);
+    console.log(`  FINAL SCORE: ${s.score.toFixed(3)}`);
+    console.log(`  ├─ Distance:      ${deal.distance} mi → 1 - (${deal.distance}/${maxDistance}) = ${distanceScore.toFixed(3)} × ${WEIGHTS.distance} = ${(WEIGHTS.distance * distanceScore).toFixed(3)}`);
+    console.log(`  ├─ Tag match:     "${deal.tag}" | explicit=${isExplicit} | implicit=${implicitTag.toFixed(3)} → ${tagMatchScore.toFixed(3)} × ${WEIGHTS.tagMatch} = ${(WEIGHTS.tagMatch * tagMatchScore).toFixed(3)}`);
+    console.log(`  ├─ Deal type:     "${deal.deal_type}" | score=${dealTypeScore.toFixed(3)} × ${WEIGHTS.dealTypeMatch} = ${(WEIGHTS.dealTypeMatch * dealTypeScore).toFixed(3)}`);
+    console.log(`  ├─ Time:          open=${isOpen} | relevant=${isRelevantTime} → ${timeScore.toFixed(3)} × ${WEIGHTS.timeOfDay} = ${(WEIGHTS.timeOfDay * timeScore).toFixed(3)}`);
+    console.log(`  ├─ Rating:        ${rating}/5 → ${ratingScore.toFixed(3)} × ${WEIGHTS.rating} = ${(WEIGHTS.rating * ratingScore).toFixed(3)}`);
+    console.log(`  ├─ Popularity:    ${popularityMap[deal.deal_id] ?? 0} interactions → ${popularityScore.toFixed(3)} × ${WEIGHTS.popularity} = ${(WEIGHTS.popularity * popularityScore).toFixed(3)}`);
+    console.log(`  └─ Saves:         ${saveCount} saves for "${deal.tag}" → ${savesScore.toFixed(3)} × ${WEIGHTS.saves} = ${(WEIGHTS.saves * savesScore).toFixed(3)}`);
+  });
+  console.log('\n=====================================');
 
   return scored.map((s) => s.deal);
 }
