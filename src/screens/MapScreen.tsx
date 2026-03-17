@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { 
-  View, Text, StyleSheet, Animated, Dimensions, TouchableOpacity, PanResponder 
+  View, Text, StyleSheet, Animated, Dimensions, TouchableOpacity, PanResponder, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { RootStackScreenProps } from '../types';
-import { DEALS } from '../data/DummyData';
+import { RootStackScreenProps, Deal } from '../types';
+//import { DEALS } from '../data/DummyData';
 import { X, ChevronUp, MapPin } from 'lucide-react-native';
+import { getDeals } from '../lib/deals';
 
 const { height } = Dimensions.get('window');
 
@@ -19,6 +20,7 @@ const INITIAL_REGION = {
 
 export default function MapScreen({ navigation }: RootStackScreenProps<'Map'>) {
   const translateY = useRef(new Animated.Value(-height)).current;
+  const [mapDeals, setMapDeals] = React.useState<any[]>([]);
 
   useEffect(() => {
     Animated.timing(translateY, {
@@ -26,6 +28,10 @@ export default function MapScreen({ navigation }: RootStackScreenProps<'Map'>) {
       duration: 450,
       useNativeDriver: true,
     }).start();
+
+    getDeals().then(data => {
+      setMapDeals(data);
+    }).catch(err => console.error("Failed to load map deals", err));
   }, []);
 
   const slideUpAndClose = () => {
@@ -70,30 +76,34 @@ export default function MapScreen({ navigation }: RootStackScreenProps<'Map'>) {
         {/* MAP CONTAINER */}
         <View style={styles.mapWrapper}>
           <MapView
-            provider={PROVIDER_GOOGLE}
+            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
             style={StyleSheet.absoluteFillObject}
             initialRegion={INITIAL_REGION}
           >
-            {DEALS.map((deal, index) => (
-              <Marker
-                key={deal.deal_id}
-                coordinate={{
-                  latitude: INITIAL_REGION.latitude + (index === 0 ? 0.005 : index === 1 ? -0.008 : 0.002),
-                  longitude: INITIAL_REGION.longitude + (index === 0 ? -0.005 : index === 1 ? 0.01 : -0.012),
-                }}
-                onPress={() => navigation.navigate('DealDetails', { deal })}
-              >
-                <View style={styles.customMarker}>
-                  <View style={styles.pinBubble}>
-                    <Text style={styles.pinText}>{deal.restaurant_id}</Text>
+            {mapDeals.map((deal) => {
+              const lat = deal.Restaurants?.latitude;
+              const lng = deal.Restaurants?.longitude;
+
+              if (!lat || !lng) return null;
+
+              return (
+                <Marker
+                  key={deal.deal_id}
+                  coordinate={{ latitude: lat, longitude: lng }}
+                  onPress={() => navigation.navigate('DealDetails', { deal: deal as unknown as Deal })}
+                >
+                  <View style={styles.customMarker}>
+                    <View style={styles.pinBubble}>
+                      <Text style={styles.pinText}>{deal.restaurant_id}</Text>
+                    </View>
+                    <View style={styles.pinIconContainer}>
+                      <MapPin color="#000" size={34} fill="#000" strokeWidth={1} />
+                      <View style={styles.whiteDot} />
+                    </View>
                   </View>
-                  <View style={styles.pinIconContainer}>
-                    <MapPin color="#000" size={34} fill="#000" strokeWidth={1} />
-                    <View style={styles.whiteDot} />
-                  </View>
-                </View>
-              </Marker>
-            ))}
+                </Marker>
+              );
+            })}
           </MapView>
         </View>
 
