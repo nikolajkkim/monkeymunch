@@ -23,7 +23,7 @@ const MEAL_TIMES = ['Breakfast', 'Lunch', 'Dinner'];
 export default function QuizPreferencesScreen({ navigation }: RootStackScreenProps<'QuizPreferences'>) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedMealTime, setSelectedMealTime] = useState<string | null>(null);
-  const [drinkDeals, setDrinkDeals] = useState<boolean | null>(null);
+  // const [drinkDeals, setDrinkDeals] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +36,8 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
   };
 
   const handleContinue = async () => {
-    if (!selectedMealTime || drinkDeals === null) return;
+    // if (!selectedMealTime || drinkDeals === null) return;
+    if (!selectedMealTime) return;
   
     setError(null);
     setLoading(true);
@@ -65,11 +66,17 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
       });
   
       // Log the choices before inserting
+      // console.log('Saving preferences for user:', {
+      //   userId: user.id,
+      //   cuisines: selectedCuisines,
+      //   mealTime: selectedMealTime,
+      //   drinkDeals,
+      // });
       console.log('Saving preferences for user:', {
         userId: user.id,
         cuisines: selectedCuisines,
         mealTime: selectedMealTime,
-        drinkDeals,
+        // drinkDeals,
       });
   
       const { error: prefsError } = await supabase.from('preferences').insert({
@@ -93,7 +100,8 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
     }
   };
 
-  const canContinue = selectedCuisines.length > 0 && selectedMealTime && drinkDeals !== null && !loading;
+  // const canContinue = selectedCuisines.length > 0 && selectedMealTime && drinkDeals !== null && !loading;
+  const canContinue = selectedCuisines.length > 0 && selectedMealTime && !loading;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -111,7 +119,7 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
       >
         {/* Cuisine Preferences */}
         <View style={styles.section}>
-          <Text style={styles.questionText}>What type of cuisine do you prefer?</Text>
+          <Text style={styles.questionText}>What type of cuisine/drinks do you prefer?</Text>
           <Text style={styles.helperText}>Select all that apply</Text>
           
           <View style={styles.optionsGrid}>
@@ -165,7 +173,7 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
           </View>
         </View>
 
-        {/* Drink Deals */}
+        {/* Drink Deals 
         <View style={styles.section}>
           <Text style={styles.questionText}>Are you a fan of drink deals?</Text>
           <Text style={styles.helperText}>Choose one</Text>
@@ -205,6 +213,7 @@ export default function QuizPreferencesScreen({ navigation }: RootStackScreenPro
             </TouchableOpacity>
           </View>
         </View>
+        */}
 
         {/* Continue Button */}
         <TouchableOpacity
