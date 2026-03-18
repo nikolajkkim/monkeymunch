@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Image, Animated } from 'react-native';
 import { Deal } from '../types';
 
@@ -9,13 +9,27 @@ interface DealCardProps {
   deal: Deal;
   index: number;
   scrollX: Animated.Value;
+  onSaveToggle: (deal: Deal, saved: boolean) => void;
+  initialSaved?: boolean;
 }
 
-export default function DealCard({ deal, index, scrollX }: DealCardProps) {
-  
+export default function DealCard({ deal, index, scrollX, onSaveToggle, initialSaved = false }: DealCardProps) {
+  const [saved, setSaved] = useState(initialSaved);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const inputRange = [(index - 1) * CARD_WIDTH, index * CARD_WIDTH, (index + 1) * CARD_WIDTH];
   const scale = scrollX.interpolate({ inputRange, outputRange: [0.9, 1, 0.9], extrapolate: 'clamp' });
   const opacity = scrollX.interpolate({ inputRange, outputRange: [0.6, 1, 0.6], extrapolate: 'clamp' });
+
+  const handleSaveToggle = () => {
+    const newSaved = !saved;
+    setSaved(newSaved);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onSaveToggle(deal, newSaved);
+    }, 500);
+  };
 
   return (
     <Animated.View style={[styles.cardContainer, { transform: [{ scale }], opacity }]}>
@@ -26,8 +40,8 @@ export default function DealCard({ deal, index, scrollX }: DealCardProps) {
           style={styles.image} 
         />
         
-        <TouchableOpacity style={styles.heartButton}>
-          <Text style={styles.heartText}>♥</Text>
+        <TouchableOpacity style={styles.heartButton} onPress={handleSaveToggle}>
+          <Text style={[styles.heartText, !saved && styles.heartTextUnsaved]}>♥</Text>
         </TouchableOpacity>
 
         <View style={styles.cardContent}>
@@ -75,6 +89,9 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
     fontSize: 18,
     lineHeight: 20,
+  },
+  heartTextUnsaved: {
+    color: '#CCC',
   },
   cardContent: {
     paddingTop: 16,

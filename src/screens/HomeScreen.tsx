@@ -6,12 +6,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Deal, RootStackScreenProps } from '../types';
 import DealCard, { CARD_WIDTH } from '../components/DealCard';
-import { getPersonalizedDeals } from '../utils/PreferenceEngine';
+import { getPersonalizedDeals, trackDealEvent } from '../utils/PreferenceEngine';
 import { ChevronDown, ChevronUp, Search, RefreshCw, X } from 'lucide-react-native';
 import { getDeals } from '../lib/deals';
 import { getDistanceMiles } from '../utils/Distance';
 import { getUserCoords } from '../utils/GetUserCoords';
-import { supabase } from '../lib/supabase'; 
+import { supabase } from '../lib/supabase';
 
 const { width } = Dimensions.get('window');
 const SPACING = (width - CARD_WIDTH) / 2;
@@ -23,6 +23,7 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
   const [deals, setDeals] = useState<Deal[]>([]);
   const [rankedDeals, setRankedDeals] = useState<Deal[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [savedDealIds, setSavedDealIds] = useState<Set<number>>(new Set());
 
   // -----------------------------------------------
   // AUTH — get current user id once on mount
@@ -32,6 +33,40 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
       setUserId(data.user?.id ?? null);
     });
   }, []);
+
+  // -----------------------------------------------
+  // SAVED DEALS — fetch which deals user has saved
+  // -----------------------------------------------
+  const loadSavedDeals = async (uid: string) => {
+    const { data, error } = await supabase
+      .from('user_events')
+      .select('deal_id, event_type')
+      .eq('user_id', uid)
+      .in('event_type', ['saved', 'unsaved']);
+
+    if (error) {
+      console.error('Error fetching saved deals:', error);
+      return;
+    }
+
+    // Replay events in order to get current saved state per deal
+    const savedMap: Record<number, boolean> = {};
+    (data ?? []).forEach((row) => {
+      savedMap[row.deal_id] = row.event_type === 'saved';
+    });
+
+    const savedIds = new Set(
+      Object.entries(savedMap)
+        .filter(([_, isSaved]) => isSaved)
+        .map(([id]) => Number(id))
+    );
+
+    setSavedDealIds(savedIds);
+  };
+
+  useEffect(() => {
+    if (userId) loadSavedDeals(userId);
+  }, [userId]);
 
   // -----------------------------------------------
   // DATA FETCHING — load deals with distance
@@ -105,6 +140,36 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
     }
   }, [rankedInfiniteDeals]);
 
+  // -----------------------------------------------
+  // TRACKING — handle click and navigate
+  // -----------------------------------------------
+  const handleDealPress = (deal: Deal) => {
+    if (userId) {
+      trackDealEvent(userId, 'clicked', deal);
+    }
+    navigation.navigate('DealDetails', { deal });
+  };
+
+  // -----------------------------------------------
+  // TRACKING — handle save/unsave from DealCard
+  // -----------------------------------------------
+  const handleSaveToggle = (deal: Deal, saved: boolean) => {
+    if (!userId) return;
+
+    // Update local saved state immediately so UI stays in sync
+    setSavedDealIds((prev) => {
+      const next = new Set(prev);
+      if (saved) {
+        next.add(deal.deal_id);
+      } else {
+        next.delete(deal.deal_id);
+      }
+      return next;
+    });
+
+    trackDealEvent(userId, saved ? 'saved' : 'unsaved', deal);
+  };
+
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
@@ -115,7 +180,7 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
         if (gestureState.dy < -60) {
           const currentDeal = displayDeals[activeIndexRef.current];
           if (currentDeal) {
-            navigation.navigate('DealDetails', { deal: currentDeal });
+            handleDealPress(currentDeal);
           }
         } else if (gestureState.dy > 60) {
           navigation.navigate('Map');
@@ -132,7 +197,10 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
     setIsSearchOpen(false);
     setSearchQuery('');
 
-    loadDeals().finally(() => {
+    Promise.all([
+      loadDeals(),
+      userId ? loadSavedDeals(userId) : Promise.resolve(),
+    ]).finally(() => {
       setTimeout(() => {
         flatListRef.current?.scrollToIndex({ index: INITIAL_INDEX, animated: true });
         setIsRefreshing(false);
@@ -237,9 +305,15 @@ export default function HomeScreen({ navigation }: RootStackScreenProps<'Home'>)
             renderItem={({ item, index }) => (
               <TouchableOpacity
                 activeOpacity={1}
-                onPress={() => navigation.navigate('DealDetails', { deal: item })}
+                onPress={() => handleDealPress(item)}
               >
-                <DealCard deal={item} index={index} scrollX={scrollX} />
+                <DealCard
+                  deal={item}
+                  index={index}
+                  scrollX={scrollX}
+                  onSaveToggle={handleSaveToggle}
+                  initialSaved={savedDealIds.has(item.deal_id)}
+                />
               </TouchableOpacity>
             )}
           />
